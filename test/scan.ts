@@ -9,7 +9,7 @@ interface CounterEvent {
 describe("scanning events", () => {
   let eventStore: MemoryEventStore<CounterEvent>;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     eventStore = new MemoryEventStore<CounterEvent>(
       (e) => e.counterId,
     );
@@ -20,7 +20,6 @@ describe("scanning events", () => {
       const page = await eventStore.scan();
 
       expect(page.events).has.lengthOf(0);
-      expect(page.version).equals("0");
       expect(page.next).equals("0");
     });
   });
@@ -45,7 +44,6 @@ describe("scanning events", () => {
         { counterId: "1", type: "dec" },
       ]);
 
-      expect(page.version).equals("0");
       expect(page.next).equals("5");
     });
 
@@ -58,7 +56,6 @@ describe("scanning events", () => {
         { counterId: "1", type: "dec" },
       ]);
 
-      expect(page.version).equals("2");
       expect(page.next).equals("5");
     });
   });

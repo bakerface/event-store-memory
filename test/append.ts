@@ -9,7 +9,7 @@ interface CounterEvent {
 describe("appending an event", () => {
   let eventStore: MemoryEventStore<CounterEvent>;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     eventStore = new MemoryEventStore<CounterEvent>(
       (e) => e.counterId,
     );
@@ -23,7 +23,6 @@ describe("appending an event", () => {
         { counterId: "0", type: "inc" },
       ]);
 
-      expect(page.version).equals("0");
       expect(page.next).equals("1");
     });
   });
@@ -60,7 +59,6 @@ describe("appending an event", () => {
         { counterId: "0", type: "inc" },
       ]);
 
-      expect(page.version).equals("3");
       expect(page.next).equals("4");
     });
   });

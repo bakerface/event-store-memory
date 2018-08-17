@@ -1,4 +1,4 @@
-import { EventStore, Page, Subject, Version } from "./EventStore";
+import { Cursor, EventStore, Page, Subject } from "./EventStore";
 import { EventStoreVersionConflictError } from "./EventStoreVersionConflictError";
 import { EventStoreVersionInvalidError } from "./EventStoreVersionInvalidError";
 
@@ -7,16 +7,18 @@ export type ExtractSubject<Event> = (e: Event) => Subject;
 export class MemoryEventStore<Event> implements EventStore<Event> {
   private events: Event[];
   private extractSubject: ExtractSubject<Event>;
+  private limit: number;
 
-  public constructor(extractSubject: ExtractSubject<Event>) {
+  public constructor(extractSubject: ExtractSubject<Event>, limit = 10) {
     this.extractSubject = extractSubject;
     this.events = [];
+    this.limit = limit;
   }
 
-  public append(e: Event, version: Version = "0"): Promise<Page<Event>> {
-    const offset = parseInt(version, 10);
+  public append(e: Event, cursor: Cursor = "0"): Promise<Page<Event>> {
+    const version = parseInt(cursor, 10);
 
-    if (isNaN(offset)) {
+    if (isNaN(version)) {
       return Promise.reject(new EventStoreVersionInvalidError());
     }
 
@@ -26,7 +28,7 @@ export class MemoryEventStore<Event> implements EventStore<Event> {
       .filter((x) => this.extractSubject(x) === subject)
       .length;
 
-    if (offset !== expected) {
+    if (version !== expected) {
       return Promise.reject(new EventStoreVersionConflictError());
     }
 
@@ -34,42 +36,39 @@ export class MemoryEventStore<Event> implements EventStore<Event> {
 
     return Promise.resolve({
       events: [ e ],
-      next: "" + (offset + 1),
-      version,
+      next: "" + (version + 1),
     });
   }
 
-  public fetch(subject: Subject, version: Version = "0"): Promise<Page<Event>> {
-    const offset = parseInt(version, 10);
+  public fetch(subject: Subject, cursor: Cursor = "0"): Promise<Page<Event>> {
+    const version = parseInt(cursor, 10);
 
-    if (isNaN(offset)) {
+    if (isNaN(version)) {
       return Promise.reject(new EventStoreVersionInvalidError());
     }
 
     const events = this.events
       .filter((x) => this.extractSubject(x) === subject)
-      .slice(offset);
+      .slice(version, version + this.limit);
 
     return Promise.resolve({
       events,
-      next: "" + (offset + events.length),
-      version,
+      next: "" + (version + events.length),
     });
   }
 
-  public scan(version: Version = "0"): Promise<Page<Event>> {
-    const offset = parseInt(version, 10);
+  public scan(cursor: Cursor = "0"): Promise<Page<Event>> {
+    const offset = parseInt(cursor, 10);
 
     if (isNaN(offset)) {
       return Promise.reject(new EventStoreVersionInvalidError());
     }
 
-    const events = this.events.slice(offset);
+    const events = this.events.slice(offset, offset + this.limit);
 
     return Promise.resolve({
       events,
       next: "" + (offset + events.length),
-      version,
     });
   }
 }

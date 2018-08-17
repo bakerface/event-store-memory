@@ -2,6 +2,7 @@
   "compilerOptions": {
     "declaration": true,
     "esModuleInterop": true,
+    "lib": [ "es2015" ],
     "module": "commonjs",
     "moduleResolution": "node",
     "noFallthroughCasesInSwitch": true,
@@ -13,7 +14,7 @@
     "outDir": "lib",
     "removeComments": true,
     "strict": true,
-    "target": "es6"
+    "target": "es2015"
   },
   "exclude": [
     "node_modules",
