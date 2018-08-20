@@ -1,8 +1,18 @@
-import { Cursor, EventStore, Page, Subject } from "./EventStore";
+import { EventStore, Key, Subject } from "./EventStore";
 import { EventStoreVersionConflictError } from "./EventStoreVersionConflictError";
 import { EventStoreVersionInvalidError } from "./EventStoreVersionInvalidError";
 
 export type ExtractSubject<Event> = (e: Event) => Subject;
+
+function toOffset(key: Key = "0"): number {
+  const offset = parseInt(key, 10);
+
+  if (isNaN(offset)) {
+    throw new EventStoreVersionInvalidError();
+  }
+
+  return offset;
+}
 
 export class MemoryEventStore<Event> implements EventStore<Event> {
   private events: Event[];
@@ -15,13 +25,8 @@ export class MemoryEventStore<Event> implements EventStore<Event> {
     this.limit = limit;
   }
 
-  public append(e: Event, cursor: Cursor = "0"): Promise<Page<Event>> {
-    const version = parseInt(cursor, 10);
-
-    if (isNaN(version)) {
-      return Promise.reject(new EventStoreVersionInvalidError());
-    }
-
+  public async append(e: Event, key?: Key) {
+    const version = toOffset(key);
     const subject = this.extractSubject(e);
 
     const expected = this.events
@@ -29,46 +34,37 @@ export class MemoryEventStore<Event> implements EventStore<Event> {
       .length;
 
     if (version !== expected) {
-      return Promise.reject(new EventStoreVersionConflictError());
+      throw new EventStoreVersionConflictError();
     }
 
     this.events.push(e);
 
-    return Promise.resolve({
+    return {
       events: [ e ],
       next: "" + (version + 1),
-    });
+    };
   }
 
-  public fetch(subject: Subject, cursor: Cursor = "0"): Promise<Page<Event>> {
-    const version = parseInt(cursor, 10);
-
-    if (isNaN(version)) {
-      return Promise.reject(new EventStoreVersionInvalidError());
-    }
+  public async fetch(subject: Subject, key?: Key) {
+    const version = toOffset(key);
 
     const events = this.events
       .filter((x) => this.extractSubject(x) === subject)
       .slice(version, version + this.limit);
 
-    return Promise.resolve({
+    return {
       events,
       next: "" + (version + events.length),
-    });
+    };
   }
 
-  public scan(cursor: Cursor = "0"): Promise<Page<Event>> {
-    const offset = parseInt(cursor, 10);
-
-    if (isNaN(offset)) {
-      return Promise.reject(new EventStoreVersionInvalidError());
-    }
-
+  public async scan(key?: Key) {
+    const offset = toOffset(key);
     const events = this.events.slice(offset, offset + this.limit);
 
-    return Promise.resolve({
+    return {
       events,
       next: "" + (offset + events.length),
-    });
+    };
   }
 }

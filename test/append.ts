@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { EventStoreVersionConflictError, MemoryEventStore } from "../src";
+import { MemoryEventStore } from "../src";
 
 interface CounterEvent {
   readonly counterId: string;
@@ -40,7 +40,7 @@ describe("appending an event", () => {
       try {
         await eventStore.append({ counterId: "0", type: "inc" });
       } catch (err) {
-        expect(err).instanceOf(EventStoreVersionConflictError);
+        expect(err.name).equals("EventStoreVersionConflictError");
       }
     });
 
@@ -48,7 +48,7 @@ describe("appending an event", () => {
       try {
         await eventStore.append({ counterId: "0", type: "inc" }, "1");
       } catch (err) {
-        expect(err).instanceOf(EventStoreVersionConflictError);
+        expect(err.name).equals("EventStoreVersionConflictError");
       }
     });
 
