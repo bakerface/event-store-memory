@@ -25,9 +25,17 @@ export class MemoryEventStore<Event> implements EventStore<Event> {
     this.limit = limit;
   }
 
-  public async append(e: Event, key?: Key) {
+  public async append(events: Event[], key?: Key) {
     const version = toOffset(key);
-    const subject = this.extractSubject(e);
+
+    if (events.length === 0) {
+      return {
+        events,
+        next: "" + version,
+      };
+    }
+
+    const subject = this.extractSubject(events[0]);
 
     const expected = this.events
       .filter((x) => this.extractSubject(x) === subject)
@@ -37,11 +45,11 @@ export class MemoryEventStore<Event> implements EventStore<Event> {
       throw new EventStoreVersionConflictError();
     }
 
-    this.events.push(e);
+    this.events = this.events.concat(events);
 
     return {
-      events: [ e ],
-      next: "" + (version + 1),
+      events,
+      next: "" + (version + events.length),
     };
   }
 

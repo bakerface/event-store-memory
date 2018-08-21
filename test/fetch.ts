@@ -1,10 +1,6 @@
 import { expect } from "chai";
 import { MemoryEventStore } from "../src";
-
-interface CounterEvent {
-  readonly counterId: string;
-  readonly type: "inc" | "dec";
-}
+import { CounterEvent, dec, inc } from "./Counter";
 
 describe("fetching events", () => {
   let eventStore: MemoryEventStore<CounterEvent>;
@@ -26,11 +22,10 @@ describe("fetching events", () => {
 
   describe("when there are events", () => {
     beforeEach(async () => {
-      await eventStore.append({ counterId: "0", type: "inc" });
-      await eventStore.append({ counterId: "0", type: "dec" }, "1");
-      await eventStore.append({ counterId: "1", type: "inc" });
-      await eventStore.append({ counterId: "0", type: "inc" }, "2");
-      await eventStore.append({ counterId: "1", type: "dec" }, "1");
+      await eventStore.append([ inc("0"), dec("0") ]);
+      await eventStore.append([ inc("1") ]);
+      await eventStore.append([ inc("0") ], "2");
+      await eventStore.append([ dec("1") ], "1");
     });
 
     it("can fetch without a version", async () => {

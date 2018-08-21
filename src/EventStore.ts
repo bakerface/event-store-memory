@@ -7,7 +7,7 @@ export interface Page<Event> {
 }
 
 export interface EventStore<Event> {
-  append(e: Event, key?: Key): Promise<Page<Event>>;
+  append(events: Event[], key?: Key): Promise<Page<Event>>;
   fetch(subject: Subject, key?: Key): Promise<Page<Event>>;
   scan(key?: Key): Promise<Page<Event>>;
 }
