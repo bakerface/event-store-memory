@@ -1,6 +1,6 @@
 {
   "name": "@event-store/memory",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "An in-memory event store",
   "author": "Chris Baker <mail.chris.baker@gmail.com>",
   "license": "MIT",
