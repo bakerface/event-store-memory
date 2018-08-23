@@ -1,53 +1,58 @@
 import { expect } from "chai";
-import { MemoryEventStore } from "../src";
-import { CounterEvent, dec, inc } from "./Counter";
+import { EventStore, MemoryEventStore } from "../src";
 
-describe("fetching events", () => {
-  let eventStore: MemoryEventStore<CounterEvent>;
+describe("MemoryEventStore#fetch(subject, [key])", () => {
+  let eventStore: EventStore<string>;
 
-  beforeEach(() => {
-    eventStore = new MemoryEventStore<CounterEvent>(
-      (e) => e.counterId,
-    );
+  beforeEach(async () => {
+    eventStore = new MemoryEventStore<string>(2);
+
+    await eventStore.append("A", [ "foo" ]);
+    await eventStore.append("B", [ "foo", "bar" ]);
+    await eventStore.append("C", [ "foo", "bar", "baz" ]);
   });
 
-  describe("when there are no events", () => {
-    it("can fetch without a version", async () => {
-      const page = await eventStore.fetch("0");
+  it("can fetch unknown subjects without a key", async () => {
+    const page = await eventStore.fetch("D");
 
-      expect(page.events).has.lengthOf(0);
-      expect(page.next).equals("0");
+    expect(page).eqls({
+      items: [],
+      key: "0",
     });
   });
 
-  describe("when there are events", () => {
-    beforeEach(async () => {
-      await eventStore.append([ inc("0"), dec("0") ]);
-      await eventStore.append([ inc("1") ]);
-      await eventStore.append([ inc("0") ], "2");
-      await eventStore.append([ dec("1") ], "1");
+  it("can fetch known subjects without a key", async () => {
+    const page = await eventStore.fetch("B");
+
+    expect(page).eqls({
+      items: [
+        { event: "foo", subject: "B" },
+        { event: "bar", subject: "B" },
+      ],
+      key: "2",
     });
+  });
 
-    it("can fetch without a version", async () => {
-      const page = await eventStore.fetch("0");
+  it("can fetch known subjects with a key", async () => {
+    const page = await eventStore.fetch("C", "2");
 
-      expect(page.events).eqls([
-        { counterId: "0", type: "inc" },
-        { counterId: "0", type: "dec" },
-        { counterId: "0", type: "inc" },
-      ]);
-
-      expect(page.next).equals("3");
+    expect(page).eqls({
+      items: [
+        { event: "baz", subject: "C" },
+      ],
+      key: "3",
     });
+  });
 
-    it("can fetch starting at a specific version", async () => {
-      const page = await eventStore.fetch("0", "2");
+  it("can fetch with a limit", async () => {
+    const page = await eventStore.fetch("C");
 
-      expect(page.events).eqls([
-        { counterId: "0", type: "inc" },
-      ]);
-
-      expect(page.next).equals("3");
+    expect(page).eqls({
+      items: [
+        { event: "foo", subject: "C" },
+        { event: "bar", subject: "C" },
+      ],
+      key: "2",
     });
   });
 });

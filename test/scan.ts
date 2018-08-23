@@ -1,57 +1,40 @@
 import { expect } from "chai";
-import { MemoryEventStore } from "../src";
-import { CounterEvent, dec, inc } from "./Counter";
+import { EventStore, MemoryEventStore } from "../src";
 
-describe("scanning events", () => {
-  let eventStore: MemoryEventStore<CounterEvent>;
+describe("MemoryEventStore#scan([key])", () => {
+  let eventStore: EventStore<string>;
 
-  beforeEach(() => {
-    eventStore = new MemoryEventStore<CounterEvent>(
-      (e) => e.counterId,
-    );
+  beforeEach(async () => {
+    eventStore = new MemoryEventStore<string>(4);
+
+    await eventStore.append("A", [ "foo" ]);
+    await eventStore.append("B", [ "foo", "bar" ]);
+    await eventStore.append("C", [ "foo", "bar", "baz" ]);
   });
 
-  describe("when there are no events", () => {
-    it("can scan without a version", async () => {
-      const page = await eventStore.scan();
+  it("can scan without a key", async () => {
+    const page = await eventStore.scan();
 
-      expect(page.events).has.lengthOf(0);
-      expect(page.next).equals("0");
+    expect(page).eqls({
+      items: [
+        { event: "foo", subject: "A" },
+        { event: "foo", subject: "B" },
+        { event: "bar", subject: "B" },
+        { event: "foo", subject: "C" },
+      ],
+      key: "4",
     });
   });
 
-  describe("when there are events", () => {
-    beforeEach(async () => {
-      await eventStore.append([ inc("0"), dec("0") ]);
-      await eventStore.append([ inc("1") ]);
-      await eventStore.append([ inc("0") ], "2");
-      await eventStore.append([ dec("1") ], "1");
-    });
+  it("can scan with a key", async () => {
+    const page = await eventStore.scan("4");
 
-    it("can scan without a version", async () => {
-      const page = await eventStore.scan();
-
-      expect(page.events).eqls([
-        { counterId: "0", type: "inc" },
-        { counterId: "0", type: "dec" },
-        { counterId: "1", type: "inc" },
-        { counterId: "0", type: "inc" },
-        { counterId: "1", type: "dec" },
-      ]);
-
-      expect(page.next).equals("5");
-    });
-
-    it("can scan starting at a specific version", async () => {
-      const page = await eventStore.scan("2");
-
-      expect(page.events).eqls([
-        { counterId: "1", type: "inc" },
-        { counterId: "0", type: "inc" },
-        { counterId: "1", type: "dec" },
-      ]);
-
-      expect(page.next).equals("5");
+    expect(page).eqls({
+      items: [
+        { event: "bar", subject: "C" },
+        { event: "baz", subject: "C" },
+      ],
+      key: "6",
     });
   });
 });
